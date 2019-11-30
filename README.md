@@ -1,2 +1,2 @@
 # arduino_analog_chart
-<b>under development</b>
+<img src="https://img.shields.io/badge/stage-under%20development-informational">
