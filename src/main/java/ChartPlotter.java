@@ -22,6 +22,9 @@ import java.awt.*;
 public class ChartPlotter extends ApplicationFrame {
     public static final String PAUSE_BUTTON_TITTLE = "pause";
     public static final String PAUSE_BUTTON_ACTION_LABEL = "PAUSE_CLICKED";
+    public static final String CHECK_BUTTON_TITTLE = "check";
+    public static final String CHECK_BUTTON_ACTION_LABEL = "CHECK_CLICKED";
+    private boolean isPaused = false;
 
     private final TimeSeries sensorSeries = new TimeSeries("Data from second sensor");
 
@@ -31,30 +34,51 @@ public class ChartPlotter extends ApplicationFrame {
 
         final JFreeChart chart = createChart();
         final ChartPanel chartPanel = new ChartPanel(chart);
-        final JPanel contentPanel = new JPanel(new BorderLayout()); //todo disable resize to control panel
-        final JPanel controlPanel = new JPanel(new BorderLayout());
+        final JPanel contentPanel = new JPanel(new BorderLayout());
+        final JPanel controlPanel = new JPanel(new GridBagLayout());
         final JButton pauseButton = packButton(PAUSE_BUTTON_TITTLE, PAUSE_BUTTON_ACTION_LABEL);
-        final JLabel statusLabel = new JLabel("Connected"); //todo change to check connected or not
+        final JButton connectButton = packButton(CHECK_BUTTON_TITTLE, CHECK_BUTTON_ACTION_LABEL);
+        final JLabel statusLabel = new JLabel("Not Connected");
 
-        pauseButton.addActionListener((event) -> {
-            if (event.getActionCommand().equals(PAUSE_BUTTON_ACTION_LABEL)) {
-                //todo pause logic
+        connectButton.addActionListener((event) -> {
+            if (SerialPortUtil.checkSerialConnection()) {
+                statusLabel.setText("Connected");
+            } else {
+                statusLabel.setText("Not Connected");
             }
         });
 
-        contentPanel.add(controlPanel, BorderLayout.CENTER);
+        pauseButton.addActionListener((event) -> { //BUG no changes when unpause
+            if (!isPaused) {
+                pauseButton.setText("unpause");
+                isPaused = true;
+            } else {
+                pauseButton.setText("pause");
+                isPaused = false;
+                sensorSeries.fireSeriesChanged();
+            }
+        });
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1;
+        gbc.insets = new Insets(4, 4, 4, 4);
+
+        contentPanel.add(controlPanel, BorderLayout.EAST);
         contentPanel.add(chartPanel, BorderLayout.WEST);
-        controlPanel.add(pauseButton, BorderLayout.NORTH);
-        controlPanel.add(statusLabel);
+        controlPanel.add(pauseButton, gbc);
+        gbc.gridy++;
+        controlPanel.add(connectButton, gbc);
+        gbc.gridy++;
+        controlPanel.add(statusLabel, gbc);
         chartPanel.setPreferredSize(new java.awt.Dimension(800, 570));
         setContentPane(contentPanel);
-        setResizable(false);//hotfix
+        setResizable(false);
         pack();
         setVisible(true);
-    }
-
-    public void repaint() {
-
     }
 
     private JFreeChart createChart() {
@@ -88,8 +112,10 @@ public class ChartPlotter extends ApplicationFrame {
         plot.setRenderer(1, renderer);
     }
 
-    public void addData(double secData) {
-        sensorSeries.addOrUpdate(new Millisecond(), secData);
+    public void sendData(double secData) {
+        if (!isPaused) {
+            sensorSeries.addOrUpdate(new Millisecond(), secData);
+        }
     }
 
     private XYDataset createDataset(TimeSeries series) {
@@ -102,27 +128,4 @@ public class ChartPlotter extends ApplicationFrame {
         button.setActionCommand(actionCommand);
         return button;
     }
-
-
-
-
-
-
-    /* private void firstTimeSeries(final XYPlot plot) {
-
-        final ValueAxis xAxis = plot.getDomainAxis();
-        xAxis.setAutoRange(true);
-        xAxis.setFixedAutoRange(60000.0);
-        xAxis.setVerticalTickLabels(true);
-
-        final ValueAxis yAxis = plot.getRangeAxis();
-        yAxis.setRange(0.0, 300.0);
-
-        final XYItemRenderer renderer = plot.getRenderer();
-        renderer.setSeriesPaint(0, Color.RED);
-
-        final NumberAxis yAxis1 = (NumberAxis) plot.getRangeAxis();
-        yAxis1.setTickLabelPaint(Color.RED);
-    }
-*/
 }
