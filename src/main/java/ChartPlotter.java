@@ -7,8 +7,6 @@
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartPanel;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
@@ -20,43 +18,97 @@ import org.jfree.data.xy.XYDataset;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
-public class ChartPlotter extends ApplicationFrame  implements ActionListener{
+public class ChartPlotter extends ApplicationFrame {
+    public static final String PAUSE_BUTTON_TITTLE = "pause";
+    public static final String PAUSE_BUTTON_ACTION_LABEL = "PAUSE_CLICKED";
 
-    private final TimeSeries firstSensorData =  new TimeSeries("data from first sensor");
-    private TimeSeries secondSensorData =  new TimeSeries("data from second sensor");
+    private final TimeSeries sensorSeries = new TimeSeries("Data from second sensor");
 
-    private ChartPlotter(String title) {
-
+    public ChartPlotter(String title) {
         super(title);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
 
         final JFreeChart chart = createChart();
         final ChartPanel chartPanel = new ChartPanel(chart);
-        final JPanel content = new JPanel(new BorderLayout());
-        final JPanel wrapper = new JPanel(new BorderLayout());
-        final JButton pauseButton = new JButton("Pause");
-        final JLabel statusLabel= new JLabel("Connected");
+        final JPanel contentPanel = new JPanel(new BorderLayout()); //todo disable resize to control panel
+        final JPanel controlPanel = new JPanel(new BorderLayout());
+        final JButton pauseButton = packButton(PAUSE_BUTTON_TITTLE, PAUSE_BUTTON_ACTION_LABEL);
+        final JLabel statusLabel = new JLabel("Connected"); //todo change to check connected or not
 
-        pauseButton.setActionCommand("PAUSE_BUTTON");
-        pauseButton.addActionListener(this);
-        pauseButton.setSize(200,100);
+        pauseButton.addActionListener((event) -> {
+            if (event.getActionCommand().equals(PAUSE_BUTTON_ACTION_LABEL)) {
+                //todo pause logic
+            }
+        });
 
-        content.add(wrapper, BorderLayout.EAST);
-        content.add(chartPanel, BorderLayout.WEST);
-        wrapper.add(pauseButton, BorderLayout.NORTH);
-        wrapper.add(statusLabel);
-        chartPanel.setPreferredSize(new java.awt.Dimension(500, 270));
-        setContentPane(content);
+        contentPanel.add(controlPanel, BorderLayout.CENTER);
+        contentPanel.add(chartPanel, BorderLayout.WEST);
+        controlPanel.add(pauseButton, BorderLayout.NORTH);
+        controlPanel.add(statusLabel);
+        chartPanel.setPreferredSize(new java.awt.Dimension(800, 570));
+        setContentPane(contentPanel);
+        setResizable(false);//hotfix
+        pack();
+        setVisible(true);
     }
 
-    private XYDataset createDataset(final TimeSeries series) {
+    public void repaint() {
+
+    }
+
+    private JFreeChart createChart() {
+        final XYDataset dataset = this.createDataset(sensorSeries);
+
+        final JFreeChart timeSeriesChart = ChartFactory
+                .createTimeSeriesChart("Dynamic Line And TimeSeries Chart", "Time",
+                        "Values", dataset, true, true, false);
+
+        final XYPlot plot = timeSeriesChart.getXYPlot();
+        plot.setBackgroundPaint(new Color(0xffffe0));
+        plot.setDomainGridlinesVisible(true);
+        plot.setDomainGridlinePaint(Color.LIGHT_GRAY);
+        plot.setRangeGridlinesVisible(true);
+        plot.setRangeGridlinePaint(Color.LIGHT_GRAY);
+        plot.getDomainAxis().setAutoRange(true);
+
+        this.secondTimeSeries(plot);
+
+        return timeSeriesChart;
+    }
+
+    private void secondTimeSeries(XYPlot plot) {
+        XYDataset secondDataset = this.createDataset(sensorSeries);
+        plot.setDataset(1, secondDataset);
+        plot.mapDatasetToDomainAxis(1, 0);
+        plot.mapDatasetToRangeAxis(1, 0);
+
+        final XYItemRenderer renderer = new XYLineAndShapeRenderer(true, false);
+        renderer.setSeriesPaint(0, Color.BLUE);
+        plot.setRenderer(1, renderer);
+    }
+
+    public void addData(double secData) {
+        sensorSeries.addOrUpdate(new Millisecond(), secData);
+    }
+
+    private XYDataset createDataset(TimeSeries series) {
         return new TimeSeriesCollection(series);
     }
 
-    private void firstTimeSeries(final XYPlot plot) {
+    private JButton packButton(String tittle, String actionCommand) {
+        JButton button = new JButton(tittle);
+        button.setSize(200, 100);
+        button.setActionCommand(actionCommand);
+        return button;
+    }
+
+
+
+
+
+
+    /* private void firstTimeSeries(final XYPlot plot) {
 
         final ValueAxis xAxis = plot.getDomainAxis();
         xAxis.setAutoRange(true);
@@ -72,57 +124,5 @@ public class ChartPlotter extends ApplicationFrame  implements ActionListener{
         final NumberAxis yAxis1 = (NumberAxis) plot.getRangeAxis();
         yAxis1.setTickLabelPaint(Color.RED);
     }
-
-    private void secondTimeSeries(final XYPlot plot) {
-
-        final XYDataset secondDataset = this.createDataset(secondSensorData);
-        plot.setDataset(1, secondDataset);
-        plot.mapDatasetToDomainAxis(1, 0);
-        plot.mapDatasetToRangeAxis(1, 0);
-
-        final XYItemRenderer renderer = new XYLineAndShapeRenderer(true, false);
-        renderer.setSeriesPaint(0, Color.BLUE);
-        plot.setRenderer(1, renderer);
-    }
-
-    private JFreeChart createChart() {
-
-        final XYDataset dataset = this.createDataset(firstSensorData);
-        final JFreeChart timeSeriesChart = ChartFactory.createTimeSeriesChart("Dynamic Line And TimeSeries Chart", "Time", "Value", dataset, true, true, false);
-
-        final XYPlot plot = timeSeriesChart.getXYPlot();
-        plot.setBackgroundPaint(new Color(0xffffe0));
-        plot.setDomainGridlinesVisible(true);
-        plot.setDomainGridlinePaint(Color.LIGHT_GRAY);
-        plot.setRangeGridlinesVisible(true);
-        plot.setRangeGridlinePaint(Color.LIGHT_GRAY);
-
-        this.firstTimeSeries(plot);
-
-        this.secondTimeSeries(plot);
-
-        return timeSeriesChart;
-    }
-
-    private void addData(double firstData, double secData) {
-
-        //TODO make loop with "isStopped" boolean value and change it with the button
-
-        //firstSensorData.add(new Millisecond(), FirstSensorData);
-        //secondSensorData.add(new Millisecond(), SecondSensorData);
-    }
-
-    public static void main(String[] args) {
-
-        final ChartPlotter plotter = new ChartPlotter("Dynamic Arduino Data");
-        plotter.pack();
-        plotter.setVisible(true);
-    }
-
-    public void actionPerformed(ActionEvent e) {
-
-        if (e.getActionCommand().equals("PAUSE_DATA")) {
-            //TODO change isPaused value
-        }
-    }
+*/
 }
